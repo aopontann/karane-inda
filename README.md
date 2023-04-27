@@ -6,11 +6,13 @@
 ### VMインスタンスの起動からSSH接続まで
 1. Cloud Shellを[アクティブ](https://console.cloud.google.com/cloudshell/open?git_repo=https://github.com/aopontann/karane-inda)にする  
     セッション終了後にソースコードを削除したい場合は、Trust repoにチェックを入れないように
+
 2. 作業するプロジェクトを設定
 ```
 gcloud config set project <プロジェクトID>
 ```
-<プロジェクトID>は先ほど作成したプロジェクトIDに書き換えてね  
+<プロジェクトID>は先ほど作成したプロジェクトIDに書き換えてね
+
 3. 次のコマンドでCompute Engine VMインスタンスを作成
 ```
 gcloud compute instances create discord-bot \
@@ -38,19 +40,23 @@ Do you want to continue (Y/n)?　と聞かれた場合、yと入力しエンタ�
 ```
 wget https://github.com/aopontann/karane-inda/archive/main.tar.gz
 ```
+
 2. 解凍
 ```
 tar -xzf main.tar.gz
 ```
+
 3. 作業ディレクトリ移動
 ```
 cd karane-inda-main
 ```
+
 4. .envを作成
 ```
 echo -e 'OPENAI_API_KEY=<OpenAIのAPIキー> \nDISCORD_TOKEN=<Discordのトークン>' >> .env
 ```
-<OpenAIのAPIキー>と<Discordのトークン>は書き換えてね </br>
+<OpenAIのAPIキー>と<Discordのトークン>は書き換えてね
+
 5. BOT起動
 ```
 go run main.go
