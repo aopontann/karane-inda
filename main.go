@@ -8,6 +8,7 @@ import (
 	"syscall"
 
 	"github.com/bwmarrin/discordgo"
+	"github.com/joho/godotenv"
 	openai "github.com/sashabaranov/go-openai"
 )
 
@@ -21,6 +22,11 @@ var Client *openai.Client
 var editMode = false
 
 func main() {
+	err := godotenv.Load(".env")
+	if err != nil {
+		fmt.Println("not found .env,", err)
+		return
+	}
 	Client = openai.NewClient(os.Getenv("OPENAI_API_KEY"))
 	discord, err := discordgo.New("Bot " + os.Getenv("DISCORD_TOKEN"))
 	if err != nil {
