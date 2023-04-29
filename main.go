@@ -13,10 +13,10 @@ import (
 )
 
 type ChatType struct {
-	Messages []openai.ChatCompletionMessage
+	messages []openai.ChatCompletionMessage
 }
 
-var Chat ChatType
+var Chat *ChatType
 
 var Client *openai.Client
 var editMode = false
@@ -33,6 +33,7 @@ func main() {
 		fmt.Println("error creating Discord session,", err)
 		return
 	}
+	Chat = NewChat()
 
 	// Register the messageCreate func as a callback for MessageCreate events.
 	discord.AddHandler(messageCreate)
@@ -58,15 +59,14 @@ func main() {
 }
 
 func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
-	// メッセージを送ったユーザー名がBOTの名前になってしまうため、このような実装をした（原因分からない）
+	// ログ表示
+	// メッセージを送ったユーザー名を取得してもBOTの名前になっているため、このような実装をした（原因分からない）
 	if m.Author.ID == s.State.User.ID {
 		log := fmt.Sprintf("院田唐音: %s", m.Content)
 		fmt.Println(log)
-		Chat.Add(openai.ChatCompletionMessage{Role: openai.ChatMessageRoleAssistant, Content: m.Content})
 	} else {
 		log := fmt.Sprintf("ユーザー: %s", m.Content)
 		fmt.Println(log)
-		Chat.Add(openai.ChatCompletionMessage{Role: openai.ChatMessageRoleUser, Content: m.Content})
 	}
 
 	// BOTがBOT自身のメッセージに返事しないようにするための処理
@@ -75,7 +75,7 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 	}
 
 	if m.Content == "$system_content" {
-		s.ChannelMessageSend(m.ChannelID, sysContent)
+		s.ChannelMessageSend(m.ChannelID, Chat.GetSysContent())
 		return
 	}
 
@@ -94,7 +94,7 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 	if editMode {
 		editMode = false
 		s.ChannelMessageSend(m.ChannelID, "編集完了しました")
-		Chat.Reset(m.Content)
+		Chat.Edit(m.Content)
 		return
 	}
 
@@ -105,35 +105,60 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 
 	if m.Content == "$init" {
 		Chat.Init()
+		return
 	}
+
+	// 取得したユーザーのメッセージを履歴に登録
+	Chat.Add(openai.ChatCompletionMessage{Role: openai.ChatMessageRoleUser, Content: m.Content})
 
 	msg, err := Chat.Send()
 	if err != nil {
 		return
 	}
+	// ChatGPTのメッセージを履歴に登録
+	Chat.Add(openai.ChatCompletionMessage{Role: openai.ChatMessageRoleAssistant, Content: msg})
+
 	s.ChannelMessageSend(m.ChannelID, msg)
 }
 
-func (c ChatType) Init() {
-	Chat.Messages = []openai.ChatCompletionMessage{{Role: openai.ChatMessageRoleSystem, Content: sysContent}}
+func NewChat() *ChatType {
+	return &ChatType{
+		messages: []openai.ChatCompletionMessage{{Role: openai.ChatMessageRoleSystem, Content: sysContent}},
+	}
+}
+
+// 性格を初期化し、メッセージ履歴も削除
+func (c *ChatType) Init() {
+	c.messages = []openai.ChatCompletionMessage{{Role: openai.ChatMessageRoleSystem, Content: sysContent}}
 }
 
 // 受け取ったメッセージを履歴に追加
-func (c ChatType) Add(message openai.ChatCompletionMessage) {
-	Chat.Messages = append(Chat.Messages, message)
+func (c *ChatType) Add(message openai.ChatCompletionMessage) {
+	c.messages = append(c.messages, message)
 }
 
-func (c ChatType) Reset(content string) {
-	Chat.Messages = []openai.ChatCompletionMessage{{Role: openai.ChatMessageRoleSystem, Content: content}}
+// ChatGPTの性格を編集
+func (c *ChatType) Edit(content string) {
+	c.messages = []openai.ChatCompletionMessage{{Role: openai.ChatMessageRoleSystem, Content: content}}
+}
+
+// ChatGPTの性格を取得
+func (c *ChatType) GetSysContent() string {
+	return c.messages[0].Content
+}
+
+// メッセージ履歴を削除
+func (c *ChatType) Reset() {
+	c.messages = []openai.ChatCompletionMessage{{Role: openai.ChatMessageRoleSystem, Content: c.messages[0].Content}}
 }
 
 // ChatGPTにメッセージ送り、返事を受け取る
-func (c ChatType) Send() (string, error) {
+func (c *ChatType) Send() (string, error) {
 	resp, err := Client.CreateChatCompletion(
 		context.Background(),
 		openai.ChatCompletionRequest{
 			Model: openai.GPT3Dot5Turbo,
-			Messages: Chat.Messages,
+			Messages: c.messages,
 		},
 	)
 
