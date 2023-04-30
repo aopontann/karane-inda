@@ -23,54 +23,33 @@ DISCORD_TOKEN=aaa...
 go run main.go
 ```
 
-### BOTを常に稼働状態にする
+### BOTを常に稼働状態にする（編集中）
 Cloud Shell Editorを閉じてしまうと、BOTが停止してしまう。
 常に起動しておくために、Google Cloud Compute Engine インスタンスを使用する。
 1. Google Cloudのプロジェクトを[作成](https://console.cloud.google.com/projectcreate)する
     - プロジェクトIDを確認しておく
 2. Cloud Consoleで[課金を有効](https://console.cloud.google.com/billing?hl=ja)にする
 3. [Cloud Shell](https://console.cloud.google.com/cloudshell/open?git_repo=https://github.com/aopontann/karane-inda)を起動
-4. 実行ファイルを作成
-```
-go build main.go
-```
-
-5. 作業するプロジェクトを設定
+4. 作業するプロジェクトを設定
 ```
 gcloud config set project <プロジェクトID>
 ```
 <プロジェクトID>は先ほど作成したプロジェクトIDに書き換えてね
 
+5. setup.shの9行目のAPIキーとトークンを書き換える
+```
+echo -e 'OPENAI_API_KEY=<API_KEY> \nDISCORD_TOKEN=<TOKEN>' >> .env
+```
+
 6. 次のコマンドでCompute Engine VMインスタンスを作成
 ```
 gcloud compute instances create discord-bot \
     --zone=us-west1-b \
-    --machine-type=e2-micro
+    --machine-type=e2-micro \
+    --metadata-from-file=startup-script=setup.sh
 ```
 Would you like to enable and retry (this will take a few minutes)?と聞かれた場合、yを入力しエンターキーを押す  
 Cloud Shell の承認画面が出てきた場合、承認をクリックする。
-
-7. インスタンスにファイルを転送する
-```
-gcloud compute scp --zone="us-west1-b" ~/cloudshell_open/karane-inda/main ~/cloudshell_open/karane-inda/.env discord-bot:~/
-```
-
-8. インスタンスにSSH接続
-```
-gcloud compute ssh --zone "us-west1-b" "discord-bot" 
-```
-Do you want to continue (Y/n)?　と聞かれた場合、yと入力しエンターキーを押す  
-登録するパスワードを聞かれるので、パスワードを決めて入力する。パスワードを設定しない場合は何も入力せずエンターキーを押す  
-もう一度パスワードを入力する  
-少し時間が経ったあと、ターミナルにこの文字が出力されるようになったら接続成功
-```
-<ユーザー名>@discord-bot:~$
-```
-
-9. BOTの起動
-```
-./main
-```
 
 ### 参考
 - https://codelabs.developers.google.com/codelabs/cloud-compute-engine?hl=ja#0
